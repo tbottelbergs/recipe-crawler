@@ -1,0 +1,12 @@
+{
+    "name": "recipe-crawler",
+    "version": "1.0.0",
+    "main": "app.js",
+    "dependencies": {
+        "async": "^2.6.1",
+        "request": "^2.88.0",
+        "xmldom": "^0.1.27",
+        "xmlserializer": "^0.6.1",
+        "xpath": "0.0.27"
+    }
+}
