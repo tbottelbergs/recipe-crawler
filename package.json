@@ -4,6 +4,7 @@
     "main": "app.js",
     "dependencies": {
         "async": "^2.6.1",
+        "jsonpath": "^1.0.0",
         "request": "^2.88.0",
         "xmldom": "^0.1.27",
         "xmlserializer": "^0.6.1",

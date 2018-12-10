@@ -1,91 +1,75 @@
-const https = require('https');
 const http = require('http');
-var xpath = require('xpath')
-    , dom = require('xmldom').DOMParser
-    , request = require('request')
-    , async = require('async')
+var fs = require('fs')
+    , jp = require('jsonpath');
 
-const hostname = 'localhost';
+const hostname = '192.168.1.156';
 const port = 3000;
 
+var main_dishes;
+
 const server = http.createServer((req, res) => {
+
     res.statusCode = 200;
     res.setHeader('Content-Type', 'text/html;charset=UTF-8');
 
     var result = '<html>';
     result += '<body>';
 
-    request('https://dagelijksekost.een.be/az-index', function (error, response, body) {
+    result += '<table>';
 
-        var doc = new dom().parseFromString(body);
+    var choices = getRandomInts(main_dishes.length, 10);
 
-        /*function printNode(node, prefix){
-            console.log(prefix + node.nodeName)
-        
-            if(node.hasChildNodes()){
-        
-                for(var i = 0; i < node.childNodes.length; i++){
-                    if(node.childNodes[i].nodeType == 1){
-                        printNode(node.childNodes[i], "\t" + prefix)
-                    } else {
-                        console.log("not printing " + node.childNodes[i].nodeName)
-                    }
-                }
+    for (var i = 0; i < choices.length; i++) {
+
+        var dish = main_dishes[choices[i]];
+
+        var ingredientsList = "(";
+
+        for (var j = 0; j < dish.ingredients.length; j++){
+
+            var ingredient = dish.ingredients[j];
+
+            if (j > 0){
+                ingredientsList += ", ";
             }
-        }
-        
-        printNode(doc.documentElement, "")*/
 
-        var nodes = xpath.select("//main[@id='main']/div/script", doc)
-
-        var scriptContent = nodes[0].textContent
-        var json = JSON.parse(scriptContent.substring(21, scriptContent.length - 2))
-
-        var choices = getRandomInt(json.dishes.length, 10);
-
-        result += '<table>';
-
-        for (var i = 0; i < choices.length; i++) {
-            
+            ingredientsList +=  (ingredient.amount > 0 ? ingredient.amount + " " : "") + (ingredient.unit ? (ingredient.amount > 1 ? ingredient.unit.plural : ingredient.unit.name) : '') + " " +  ingredient.prepend + " " + (ingredient.amount > 1 ? ingredient.product.plural : ingredient.product.name)
         }
 
-        async.each(choices, function (choice, callback) {
-            
-            var dish = json.dishes[choice];
-            console.log(dish);
-            request('https://dagelijksekost.een.be' + dish.url, function (error, response, body) {
+        ingredientsList += ")";
 
-                result += '<tr>';
+        result += '<tr>';
 
-                var dish_doc = new dom().parseFromString(body);
+        result += '<td><img src=\"' + dish.img + '\" width=\"250\"/></td>';
 
-                var img = xpath.select("//div[@class='dish-playground__images']/img", dish_doc)[0];
-                var time = xpath.select("//div[i[@class = 'fas fa-clock']]", dish_doc)[0];
+        result += '<td><a href=\"https://dagelijksekost.een.be' + dish.url + '\">' + dish.title + '</a> (' + dish.time + ' - ' + dish.persons + ' personen)</td>'
 
-                result += '<td><img src=\"' + img.getAttribute('src') + '\" width=\"250\"/></td>';
+        result += '<td>' + ingredientsList + '</td>'
 
-                result += '<td><a href=\"https://dagelijksekost.een.be' + dish.url + '\">' + dish.title + '</a> (' + time.textContent + ')</td>'
+        result += '</tr>';
 
-                result += '</tr>';
+    }
 
-                callback();
-            });
-        }, function (err) {
-            console.log('done')
-            result += '</table>';
-            result += '</body>';
-            result += '</html>';
-            res.end(result);
-        });
-    });
+    result += '</table>';
+
+    result + '</body>';
+
+    result += '</html>';
+
+    res.end(result);
 
 });
 
 server.listen(port, hostname, () => {
+    
+    var dishes = JSON.parse(fs.readFileSync('dagelijksekost.json', 'utf8'));
+    main_dishes = jp.query(dishes, "$..dishes[?(@.category_primary == 'Hoofdgerecht')]");
+
     console.log(`Server running at http://${hostname}:${port}/`);
+
 });
 
-function getRandomInt(max, count) {
+function getRandomInts(max, count) {
     var result = new Array();
     for (var i = 0; i < count; i++) {
         let num = Math.floor(Math.random() * max)
@@ -94,6 +78,6 @@ function getRandomInt(max, count) {
     return result;
 }
 
-function getDish(url){
+function getDish(url) {
     console.log('calling dish');
 }
